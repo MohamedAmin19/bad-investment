@@ -30,7 +30,7 @@ export function SiteFooter({
 }: SiteFooterProps) {
   return (
     <footer
-      className={`relative z-10 flex w-full flex-col gap-10 pb-12 text-white ${
+      className={`relative z-10 flex w-full flex-col gap-4 pb-12 text-white ${
         className ?? ""
       }`}
     >
@@ -76,7 +76,7 @@ export function SiteFooter({
       </div>
 
       <div
-        className="flex flex-wrap gap-8 text-sm text-white/60"
+        className="flex flex-wrap gap-8 text-xs text-white/60 pl-6"
         style={{ fontFamily: "var(--font-geist-sans)" }}
       >
         {legalLinks.map(({ label, href }) => (
