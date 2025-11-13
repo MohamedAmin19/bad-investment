@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -35,9 +35,149 @@ function useInitialRole(): SubmitRole {
   }, [roleParam]);
 }
 
+function useInitialSubmissionType(): "individual" | "company" {
+  const params = useSearchParams();
+  const typeParam = params.get("type");
+  return useMemo(() => {
+    if (typeParam === "individual") {
+      return "individual";
+    }
+    return "company";
+  }, [typeParam]);
+}
+
 export function SubmitDetailsPage() {
   const initialRole = useInitialRole();
+  const initialSubmissionType = useInitialSubmissionType();
   const [selectedRole, setSelectedRole] = useState<SubmitRole>(initialRole);
+  const [submissionType, setSubmissionType] = useState<"individual" | "company">(initialSubmissionType);
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    artist: "",
+    profile: "",
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const validateForm = (): string | null => {
+    const trimmedName = formData.name.trim();
+    const trimmedEmail = formData.email.trim();
+    const trimmedPhone = formData.phone.trim();
+
+    // Name validation
+    if (!trimmedName) {
+      return "Name is required";
+    }
+    if (trimmedName.length < 2) {
+      return "Name must be at least 2 characters";
+    }
+    if (trimmedName.length > 100) {
+      return "Name must be less than 100 characters";
+    }
+
+    // Email validation
+    if (!trimmedEmail) {
+      return "Email is required";
+    }
+    if (trimmedEmail.length > 254) {
+      return "Email must be less than 254 characters";
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      return "Invalid email format";
+    }
+    const strictEmailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!strictEmailRegex.test(trimmedEmail)) {
+      return "Please enter a valid email address";
+    }
+
+    // Phone validation (optional but validate if provided)
+    if (trimmedPhone) {
+      const phoneDigits = trimmedPhone.replace(/[\s\-\(\)\+]/g, "");
+      if (!/^\d+$/.test(phoneDigits)) {
+        return "Phone number can only contain digits, spaces, hyphens, parentheses, and +";
+      }
+      if (phoneDigits.length < 7) {
+        return "Phone number must be at least 7 digits";
+      }
+      if (phoneDigits.length > 15) {
+        return "Phone number must be less than 15 digits";
+      }
+    }
+
+    // Artist validation (optional but validate if provided)
+    if (formData.artist && formData.artist.trim().length > 200) {
+      return "Artist/Band name must be less than 200 characters";
+    }
+
+    // Profile validation (optional but validate if provided)
+    if (formData.profile && formData.profile.trim().length > 5000) {
+      return "Music profile must be less than 5000 characters";
+    }
+
+    return null;
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(false);
+
+    // Client-side validation
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          role: selectedRole,
+          submissionType: submissionType,
+          ...formData,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit");
+      }
+
+      setSuccess(true);
+      setFormData({
+        name: "",
+        phone: "",
+        email: "",
+        artist: "",
+        profile: "",
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to submit");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
   return (
     <main className="flex min-h-screen flex-col bg-black text-white">
@@ -72,7 +212,15 @@ export function SubmitDetailsPage() {
                 <button
                   key={role}
                   type="button"
-                  onClick={() => setSelectedRole(role)}
+                  onClick={() => {
+                    setSelectedRole(role);
+                    // Update submission type based on role selection
+                    if (role === "artist") {
+                      setSubmissionType("individual");
+                    } else {
+                      setSubmissionType("company");
+                    }
+                  }}
                   className={`min-w-[300px] rounded-xl border border-white px-12 py-2 text-xl tracking-[0.35rem] transition-colors duration-200 ${
                     selectedRole === role
                       ? "bg-[#d9d9d9] text-black"
@@ -85,6 +233,7 @@ export function SubmitDetailsPage() {
             </div>
 
             <form
+              onSubmit={handleSubmit}
               className="flex w-full max-w-3xl flex-col gap-8"
               style={{ fontFamily: "var(--font-league-spartan)" }}
             >
@@ -97,7 +246,11 @@ export function SubmitDetailsPage() {
                     id={`${selectedRole}-${field.id}`}
                     name={field.id}
                     type={field.type}
-                    className="border-b border-white/30 bg-transparent pb-3 text-base text-white outline-none transition-colors focus:border-white"
+                    value={formData[field.id as keyof typeof formData]}
+                    onChange={handleChange}
+                    required={field.id === "name" || field.id === "email"}
+                    disabled={isLoading}
+                    className="border-b border-white/30 bg-transparent pb-3 text-base text-white outline-none transition-colors focus:border-white disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </label>
               ))}
@@ -109,17 +262,33 @@ export function SubmitDetailsPage() {
                 <textarea
                   id={`${selectedRole}-profile`}
                   name="profile"
-                  rows={1}
-                  className="resize-none border-b border-white/30 bg-transparent pb-3 text-base text-white outline-none transition-colors focus:border-white"
+                  rows={4}
+                  value={formData.profile}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                  className="resize-none border-b border-white/30 bg-transparent pb-3 text-base text-white outline-none transition-colors focus:border-white disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </label>
+
+              {error && (
+                <div className="text-sm uppercase tracking-[0.1rem] text-red-400">
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="text-sm uppercase tracking-[0.1rem] text-green-400">
+                  Thank you! Your music submission has been received successfully.
+                </div>
+              )}
 
               <div className="flex justify-center">
                 <button
                   type="submit"
-                  className="rounded-sm bg-white/20 px-8 py-2 text-sm uppercase tracking-[0.3rem] text-white transition-opacity hover:opacity-80"
+                  disabled={isLoading}
+                  className="rounded-sm bg-white/20 px-8 py-2 text-sm uppercase tracking-[0.3rem] text-white transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Submit
+                  {isLoading ? "Submitting..." : "Submit"}
                 </button>
               </div>
             </form>

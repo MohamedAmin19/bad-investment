@@ -1,40 +1,53 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 import { ArtistTile } from "@/components/ArtistTile";
 import { HeaderNav } from "@/components/HeaderNav";
 import { SiteFooter } from "@/components/SiteFooter";
-import { artistBySlug } from "@/lib/artists";
+import type { Artist } from "@/lib/artists";
 import { mainMenuItems } from "@/lib/navigation";
 import { socialLinks } from "@/lib/socialLinks";
 
-const leftColumnOrder = [
-  "lorem-ibesome",
-  "nova-aria",
-  "echo-blade",
-  "violet-noir",
-  "atlas-ryder",
-] as const;
-
-const rightColumnOrder = [
-  "solstice-wave",
-  "hollow-echo",
-  "neon-drift",
-  "ember-lux",
-  "static-rose",
-] as const;
-
 export function ArtistsPage() {
-  const featuredArtists = [
-    ...leftColumnOrder,
-    ...rightColumnOrder,
-  ] as string[];
-  const missingArtists = featuredArtists.filter((slug) => !artistBySlug[slug]);
+  const [artists, setArtists] = useState<Artist[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (missingArtists.length > 0) {
-    throw new Error(
-      `Artist configuration is missing entries for: ${missingArtists.join(", ")}`
-    );
-  }
+  useEffect(() => {
+    const fetchArtists = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await fetch("/api/artists");
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to fetch artists");
+        }
+
+        setArtists(data.artists || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load artists");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchArtists();
+  }, []);
+
+  // Create artist lookup by slug
+  const artistBySlug = artists.reduce((acc, artist) => {
+    acc[artist.slug] = artist;
+    return acc;
+  }, {} as Record<string, Artist>);
+
+  // Split artists into two columns (first half left, second half right)
+  const leftColumnArtists = artists.slice(0, Math.ceil(artists.length / 2));
+  const rightColumnArtists = artists.slice(Math.ceil(artists.length / 2));
 
   return (
     <main className="flex min-h-screen flex-col bg-black text-white">
@@ -61,60 +74,134 @@ export function ArtistsPage() {
           </div>
 
           <div className="flex flex-1 justify-center">
-            <div className="grid w-full max-w-4xl grid-cols-[1.25fr_1fr] gap-4 bg-black p-6">
-              <div className="flex flex-col gap-4">
-                <ArtistTile
-                  artist={artistBySlug[leftColumnOrder[0]]}
-                  className="aspect-square w-full min-h-[420px] bg-white/85"
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <ArtistTile
-                    artist={artistBySlug[leftColumnOrder[1]]}
-                    className="w-full max-w-[374px] bg-white"
-                    style={{ aspectRatio: "374 / 383" }}
-                  />
-                  <ArtistTile
-                    artist={artistBySlug[leftColumnOrder[2]]}
-                    className="aspect-square bg-white"
-                  />
-                </div>
-                <ArtistTile
-                  artist={artistBySlug[leftColumnOrder[3]]}
-                  className="w-full max-w-[775px] bg-white"
-                  style={{ aspectRatio: "775 / 375" }}
-                />
-                <ArtistTile
-                  artist={artistBySlug[leftColumnOrder[4]]}
-                  className="aspect-square w-full min-h-[420px] bg-white/85"
-                />
+            {isLoading ? (
+              <div
+                className="text-center text-sm text-white/60"
+                style={{ fontFamily: "var(--font-league-spartan)" }}
+              >
+                Loading artists...
               </div>
+            ) : error ? (
+              <div
+                className="text-center text-sm text-red-400"
+                style={{ fontFamily: "var(--font-league-spartan)" }}
+              >
+                {error}
+              </div>
+            ) : artists.length === 0 ? (
+              <div
+                className="text-center text-sm text-white/60"
+                style={{ fontFamily: "var(--font-league-spartan)" }}
+              >
+                No artists found.
+              </div>
+            ) : (
+              <div className="grid w-full max-w-4xl grid-cols-[1.25fr_1fr] gap-4 bg-black p-6">
+                <div className="flex flex-col gap-4">
+                  {leftColumnArtists.map((artist, index) => {
+                    if (index === 0) {
+                      return (
+                        <ArtistTile
+                          key={artist.slug}
+                          artist={artist}
+                          className="aspect-square w-full min-h-[420px] bg-white/85"
+                        />
+                      );
+                    } else if (index === 1) {
+                      return (
+                        <div key={artist.slug} className="grid grid-cols-2 gap-4">
+                          <ArtistTile
+                            artist={artist}
+                            className="w-full max-w-[374px] bg-white"
+                            style={{ aspectRatio: "374 / 383" }}
+                          />
+                          {leftColumnArtists[2] && (
+                            <ArtistTile
+                              artist={leftColumnArtists[2]}
+                              className="aspect-square bg-white"
+                            />
+                          )}
+                        </div>
+                      );
+                    } else if (index === 3) {
+                      return (
+                        <ArtistTile
+                          key={artist.slug}
+                          artist={artist}
+                          className="w-full max-w-[775px] bg-white"
+                          style={{ aspectRatio: "775 / 375" }}
+                        />
+                      );
+                    } else if (index === 4) {
+                      return (
+                        <ArtistTile
+                          key={artist.slug}
+                          artist={artist}
+                          className="aspect-square w-full min-h-[420px] bg-white/85"
+                        />
+                      );
+                    } else if (index > 4) {
+                      return (
+                        <ArtistTile
+                          key={artist.slug}
+                          artist={artist}
+                          className="aspect-square bg-white"
+                        />
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
 
-              <div className="flex flex-col gap-4">
-                <ArtistTile
-                  artist={artistBySlug[rightColumnOrder[0]]}
-                  className="w-full max-w-[775px] bg-white"
-                  style={{ aspectRatio: "775 / 375" }}
-                />
-                <ArtistTile
-                  artist={artistBySlug[rightColumnOrder[1]]}
-                  className="aspect-square w-full min-h-[420px] bg-white/85"
-                />
-                <ArtistTile
-                  artist={artistBySlug[rightColumnOrder[2]]}
-                  className="aspect-square w-full min-h-[420px] bg-white/85"
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <ArtistTile
-                    artist={artistBySlug[rightColumnOrder[3]]}
-                    className="aspect-square bg-white"
-                  />
-                  <ArtistTile
-                    artist={artistBySlug[rightColumnOrder[4]]}
-                    className="aspect-square bg-white"
-                  />
+                <div className="flex flex-col gap-4">
+                  {rightColumnArtists.map((artist, index) => {
+                    if (index === 0) {
+                      return (
+                        <ArtistTile
+                          key={artist.slug}
+                          artist={artist}
+                          className="w-full max-w-[775px] bg-white"
+                          style={{ aspectRatio: "775 / 375" }}
+                        />
+                      );
+                    } else if (index === 1 || index === 2) {
+                      return (
+                        <ArtistTile
+                          key={artist.slug}
+                          artist={artist}
+                          className="aspect-square w-full min-h-[420px] bg-white/85"
+                        />
+                      );
+                    } else if (index >= 3) {
+                      if (index === 3) {
+                        return (
+                          <div key={artist.slug} className="grid grid-cols-2 gap-4">
+                            <ArtistTile
+                              artist={artist}
+                              className="aspect-square bg-white"
+                            />
+                            {rightColumnArtists[4] && (
+                              <ArtistTile
+                                artist={rightColumnArtists[4]}
+                                className="aspect-square bg-white"
+                              />
+                            )}
+                          </div>
+                        );
+                      }
+                      return null;
+                    }
+                    return (
+                      <ArtistTile
+                        key={artist.slug}
+                        artist={artist}
+                        className="aspect-square bg-white"
+                      />
+                    );
+                  })}
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

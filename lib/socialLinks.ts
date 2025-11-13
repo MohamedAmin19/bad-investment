@@ -4,14 +4,14 @@ import {
   Instagram,
   MessageCircle,
   Music2,
-  Twitter,
+  X,
   Youtube,
 } from "lucide-react";
 
 export const socialLinks = [
   { label: "Facebook", href: "#facebook", icon: Facebook },
   { label: "Instagram", href: "#instagram", icon: Instagram },
-  { label: "Twitter", href: "#twitter", icon: Twitter },
+  { label: "X", href: "#X", icon: X },
   { label: "TikTok", href: "#tiktok", icon: Music2 },
   { label: "YouTube", href: "#youtube", icon: Youtube },
   { label: "WhatsApp", href: "#whatsapp", icon: MessageCircle },

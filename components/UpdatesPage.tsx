@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect, FormEvent } from "react";
 import Link from "next/link";
 
 import { HeaderNav } from "@/components/HeaderNav";
@@ -5,25 +8,96 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { mainMenuItems } from "@/lib/navigation";
 import { socialLinks } from "@/lib/socialLinks";
 
-type UpdateStatus = "upcoming" | "ended";
-
 type UpdateItem = {
-  id: number;
+  id: string;
   date: string;
   title: string;
-  status: UpdateStatus;
+  isAvailable: boolean;
+  url: string;
 };
 
-const updates: UpdateItem[] = [
-  { id: 1, date: "23/12/2025", title: "Alamain concert", status: "upcoming" },
-  { id: 2, date: "23/12/2025", title: "Alamain concert", status: "upcoming" },
-  { id: 3, date: "23/12/2025", title: "Alamain concert", status: "upcoming" },
-  { id: 4, date: "23/12/2025", title: "Alamain concert", status: "upcoming" },
-  { id: 5, date: "23/12/2025", title: "Alamain concert", status: "ended" },
-  { id: 6, date: "23/12/2025", title: "Alamain concert", status: "ended" },
-];
-
 export function UpdatesPage() {
+  const [updates, setUpdates] = useState<UpdateItem[]>([]);
+  const [isLoadingUpdates, setIsLoadingUpdates] = useState(true);
+  const [updatesError, setUpdatesError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const fetchUpdates = async () => {
+      try {
+        setIsLoadingUpdates(true);
+        setUpdatesError(null);
+
+        const response = await fetch("/api/updates");
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to fetch updates");
+        }
+
+        setUpdates(data.updates || []);
+      } catch (err) {
+        setUpdatesError(err instanceof Error ? err.message : "Failed to load updates");
+      } finally {
+        setIsLoadingUpdates(false);
+      }
+    };
+
+    fetchUpdates();
+  }, []);
+
+  const validateEmail = (email: string): string | null => {
+    if (!email || email.trim() === "") {
+      return "Email is required";
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return "Invalid email format";
+    }
+    return null;
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(false);
+
+    // Client-side validation
+    const validationError = validateEmail(email);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/join-us", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to subscribe");
+      }
+
+      setSuccess(true);
+      setEmail("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to subscribe");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <main className="flex min-h-screen flex-col bg-black text-white">
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-12 px-6 py-10 md:gap-16 md:px-10 md:py-14">
@@ -56,63 +130,121 @@ export function UpdatesPage() {
                   Join Us
                 </h3>
 
-                <form className="flex w-full max-w-md items-center gap-3 border-b border-white pb-2 px-2 text-xs uppercase tracking-[0.1rem] text-white md:text-base">
-                  <label className="flex-1">
-                    <span className="sr-only">Email</span>
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      className="w-full bg-transparent text-white outline-none"
-                    />
-                  </label>
-                  <button
-                    type="submit"
-                    className="text-lg transition-opacity hover:opacity-70"
-                    aria-label="Submit email"
-                  >
-                    →
-                  </button>
+                <form
+                  onSubmit={handleSubmit}
+                  className="flex w-full max-w-md flex-col gap-3"
+                >
+                  <div className="flex items-center gap-3 border-b border-white pb-2 px-2 text-xs uppercase tracking-[0.1rem] text-white md:text-base">
+                    <label className="flex-1">
+                      <span className="sr-only">Email</span>
+                      <input
+                        type="email"
+                        placeholder="Email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={isLoading}
+                        required
+                        className="w-full bg-transparent text-white outline-none disabled:opacity-50"
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="text-lg transition-opacity hover:opacity-70 disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Submit email"
+                    >
+                      {isLoading ? "..." : "→"}
+                    </button>
+                  </div>
+                  {error && (
+                    <p className="text-xs uppercase tracking-[0.1rem] text-red-400">
+                      {error}
+                    </p>
+                  )}
+                  {success && (
+                    <p className="text-xs uppercase tracking-[0.1rem] text-green-400">
+                      Successfully subscribed!
+                    </p>
+                  )}
                 </form>
               </div>
             </div>
           </div>
 
           <div className="grid flex-1 gap-12 md:grid-cols-2">
-            {updates.map((update) => {
-              const isEnded = update.status === "ended";
-              return (
-                <article
-                  key={update.id}
-                  className="flex flex-col gap-4"
-                  style={{ fontFamily: "var(--font-league-spartan)" }}
-                >
-                  <span className="text-xs uppercase tracking-[0.3rem] text-white/70">
-                    {update.date}
-                  </span>
-                  <div
-                    className={`aspect-[4/3] w-full rounded-sm border ${
-                      isEnded
-                        ? "border-white/10 bg-white/10"
-                        : "border-white/30 bg-white/5"
-                    }`}
-                  />
-                  <div className="flex items-center justify-center">
-                    {isEnded ? (
-                      <div className="relative flex items-center justify-center px-10">
-                        <span className="absolute left-0 right-0 h-px bg-white/40" />
-                        <span className="bg-black px-4 text-sm uppercase tracking-[0.35rem] text-white/50">
-                          {update.title}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-sm uppercase tracking-[0.35rem] text-white">
-                        {update.title}
-                      </span>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
+            {isLoadingUpdates ? (
+              <div
+                className="col-span-2 text-center text-sm text-white/60"
+                style={{ fontFamily: "var(--font-league-spartan)" }}
+              >
+                Loading updates...
+              </div>
+            ) : updatesError ? (
+              <div
+                className="col-span-2 text-center text-sm text-red-400"
+                style={{ fontFamily: "var(--font-league-spartan)" }}
+              >
+                {updatesError}
+              </div>
+            ) : updates.length === 0 ? (
+              <div
+                className="col-span-2 text-center text-sm text-white/60"
+                style={{ fontFamily: "var(--font-league-spartan)" }}
+              >
+                No updates available.
+              </div>
+            ) : (
+              updates.map((update) => {
+                const isEnded = !update.isAvailable;
+                const UpdateWrapper = update.url ? Link : "div";
+                const wrapperProps = update.url
+                  ? { href: update.url, target: "_blank", rel: "noopener noreferrer" }
+                  : {};
+
+                return (
+                  <article
+                    key={update.id}
+                    className="flex flex-col gap-4"
+                    style={{ fontFamily: "var(--font-league-spartan)" }}
+                  >
+                    <span className="text-xs uppercase tracking-[0.3rem] text-white/70">
+                      {update.date}
+                    </span>
+                    <UpdateWrapper
+                      {...wrapperProps}
+                      className={update.url ? "cursor-pointer" : ""}
+                    >
+                      <div
+                        className={`aspect-[4/3] w-full rounded-sm border transition-opacity ${
+                          isEnded
+                            ? "border-white/10 bg-white/10"
+                            : "border-white/30 bg-white/5"
+                        } ${update.url ? "hover:opacity-80" : ""}`}
+                      />
+                    </UpdateWrapper>
+                    <div className="flex items-center justify-center">
+                      {isEnded ? (
+                        <div className="relative flex items-center justify-center px-10">
+                          <span className="absolute left-0 right-0 h-px bg-white/40" />
+                          <span className="bg-black px-4 text-sm uppercase tracking-[0.35rem] text-white/50">
+                            {update.title}
+                          </span>
+                        </div>
+                      ) : (
+                        <UpdateWrapper
+                          {...wrapperProps}
+                          className={update.url ? "cursor-pointer transition-opacity hover:opacity-70" : ""}
+                        >
+                          <span className="text-sm uppercase tracking-[0.35rem] text-white">
+                            {update.title}
+                          </span>
+                        </UpdateWrapper>
+                      )}
+                    </div>
+                  </article>
+                );
+              })
+            )}
           </div>
         </div>
       </div>

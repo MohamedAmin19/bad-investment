@@ -42,14 +42,14 @@ export function SubmitMusicPage() {
             >
               <button
                 type="button"
-                onClick={() => router.push("/submit/details?role=business")}
+                onClick={() => router.push("/submit/details?type=individual&role=artist")}
                 className="min-w-[300px] rounded-xl border border-white px-12 py-2 text-xl tracking-[0.35rem] text-white transition-colors duration-200 hover:bg-[#d9d9d9] hover:text-black"
               >
                 Individual
               </button>
               <button
                 type="button"
-                onClick={() => router.push("/submit/details?role=business")}
+                onClick={() => router.push("/submit/details?type=company&role=business")}
                 className="min-w-[300px] rounded-xl border border-white px-12 py-2 text-xl tracking-[0.35rem] text-white transition-colors duration-200 hover:bg-[#d9d9d9] hover:text-black"
               >
                 Company

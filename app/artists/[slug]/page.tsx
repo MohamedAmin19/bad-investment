@@ -1,25 +1,66 @@
-import { notFound } from "next/navigation";
+"use client";
+
+import { useState, useEffect } from "react";
+import { notFound, useParams } from "next/navigation";
 
 import { ArtistProfile } from "@/components/ArtistProfile";
-import { artistBySlug, artists } from "@/lib/artists";
+import type { Artist } from "@/lib/artists";
 
-type ArtistPageProps = {
-  params: { slug: string };
-};
+export default function ArtistPage() {
+  const params = useParams();
+  const slug = params.slug as string;
+  const [artist, setArtist] = useState<Artist | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const fallbackSlug = "lorem-ibesome";
+  useEffect(() => {
+    const fetchArtist = async () => {
+      if (!slug) return;
 
-export default function ArtistPage({ params }: ArtistPageProps) {
-  const artist = artistBySlug[params.slug] ?? artistBySlug[fallbackSlug];
+      try {
+        setIsLoading(true);
+        setError(null);
 
-  if (!artist) {
+        const response = await fetch(`/api/artists/${slug}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            notFound();
+            return;
+          }
+          throw new Error(data.error || "Failed to fetch artist");
+        }
+
+        setArtist(data.artist);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load artist");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchArtist();
+  }, [slug]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black text-white">
+        <div
+          className="text-sm uppercase tracking-[0.3rem] text-white/60"
+          style={{ fontFamily: "var(--font-league-spartan)" }}
+        >
+          Loading artist...
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !artist) {
     notFound();
+    return null;
   }
 
   return <ArtistProfile artist={artist} />;
-}
-
-export function generateStaticParams() {
-  return artists.map((artist) => ({ slug: artist.slug }));
 }
 

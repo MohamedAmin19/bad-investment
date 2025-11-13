@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 import { HeaderNav } from "@/components/HeaderNav";
@@ -6,52 +9,41 @@ import { mainMenuItems } from "@/lib/navigation";
 import { socialLinks } from "@/lib/socialLinks";
 
 type TourStop = {
+  id: string;
   date: string;
   city: string;
   venue: string;
   ticketsUrl: string;
 };
 
-const tourStops: TourStop[] = [
-  {
-    date: "12/11/2025",
-    city: "Cairo",
-    venue: "Cairo Stadium",
-    ticketsUrl: "#",
-  },
-  {
-    date: "01/18/2026",
-    city: "Alexandria",
-    venue: "Mediterranean Arena",
-    ticketsUrl: "#",
-  },
-  {
-    date: "02/02/2026",
-    city: "Marrakesh",
-    venue: "Atlas Pavilion",
-    ticketsUrl: "#",
-  },
-  {
-    date: "02/27/2026",
-    city: "Casablanca",
-    venue: "Atlantic Dome",
-    ticketsUrl: "#",
-  },
-  {
-    date: "03/15/2026",
-    city: "Dubai",
-    venue: "Desert Soundstage",
-    ticketsUrl: "#",
-  },
-  {
-    date: "04/09/2026",
-    city: "Doha",
-    venue: "Pearl Amphitheatre",
-    ticketsUrl: "#",
-  },
-];
-
 export function TourPage() {
+  const [tourStops, setTourStops] = useState<TourStop[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTours = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await fetch("/api/tours");
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to fetch tours");
+        }
+
+        setTourStops(data.tours || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load tours");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTours();
+  }, []);
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-10 md:gap-16 md:px-10 md:py-14">
@@ -94,24 +86,49 @@ export function TourPage() {
             </div>
 
             <div className="divide-y divide-white/10">
-              {tourStops.map((stop) => (
+              {isLoading ? (
                 <div
-                  key={`${stop.date}-${stop.city}-${stop.venue}`}
-                  className="flex items-center gap-12 px-6 py-3 text-sm md:px-8 md:py-4 md:text-xs"
-                  style={{ fontFamily: "var(--font-geist-sans)" }}
+                  className="px-6 py-8 text-center text-sm text-white/60 md:px-8"
+                  style={{ fontFamily: "var(--font-league-spartan)" }}
                 >
-                  <span className="flex-1 text-white/80">{stop.date}</span>
-                  <span className="flex-1 text-white/70">{stop.city}</span>
-                  <span className="flex-1 text-white/70">{stop.venue}</span>
-                  <Link
-                    href={stop.ticketsUrl}
-                    className="w-20 text-right text-sm uppercase tracking-[0.25rem] text-white transition-opacity hover:opacity-70 md:text-xs"
-                    style={{ fontFamily: "var(--font-league-spartan)" }}
-                  >
-                    Tickets
-                  </Link>
+                  Loading tours...
                 </div>
-              ))}
+              ) : error ? (
+                <div
+                  className="px-6 py-8 text-center text-sm text-red-400 md:px-8"
+                  style={{ fontFamily: "var(--font-league-spartan)" }}
+                >
+                  {error}
+                </div>
+              ) : tourStops.length === 0 ? (
+                <div
+                  className="px-6 py-8 text-center text-sm text-white/60 md:px-8"
+                  style={{ fontFamily: "var(--font-league-spartan)" }}
+                >
+                  No tours scheduled at this time.
+                </div>
+              ) : (
+                tourStops.map((stop) => (
+                  <div
+                    key={stop.id}
+                    className="flex items-center gap-12 px-6 py-3 text-sm md:px-8 md:py-4 md:text-xs"
+                    style={{ fontFamily: "var(--font-geist-sans)" }}
+                  >
+                    <span className="flex-1 text-white/80">{stop.date}</span>
+                    <span className="flex-1 text-white/70">{stop.city}</span>
+                    <span className="flex-1 text-white/70">{stop.venue}</span>
+                    <Link
+                      href={stop.ticketsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-20 text-right text-sm uppercase tracking-[0.25rem] text-white transition-opacity hover:opacity-70 md:text-xs"
+                      style={{ fontFamily: "var(--font-league-spartan)" }}
+                    >
+                      Tickets
+                    </Link>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </section>
