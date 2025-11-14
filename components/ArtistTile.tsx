@@ -17,6 +17,17 @@ export function ArtistTile({ artist, className = "", style }: ArtistTileProps) {
       className={`group relative block overflow-hidden bg-white text-black transition-opacity hover:opacity-80 focus-visible:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${className}`}
       style={style}
     >
+      {artist.imageUrl ? (
+        <img
+          src={
+            artist.imageUrl.startsWith("data:")
+              ? artist.imageUrl
+              : `data:image/jpeg;base64,${artist.imageUrl}`
+          }
+          alt={artist.name}
+          className="h-full w-full object-cover"
+        />
+      ) : null}
       <span
         className="pointer-events-none absolute inset-4 flex items-end text-[0.65rem] uppercase tracking-[0.25rem] text-black/60 transition-opacity group-hover:text-black/80"
         style={{ fontFamily: "var(--font-league-spartan)" }}

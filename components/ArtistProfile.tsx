@@ -48,9 +48,21 @@ export function ArtistProfile({ artist }: ArtistProfileProps) {
               className="relative w-full max-w-[775px] bg-white/10"
               style={{ aspectRatio: "775 / 1106" }}
             >
-              <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm uppercase tracking-[0.3rem] text-white/40">
-                Artist Visual
-              </span>
+              {artist.imageUrl ? (
+                <img
+                  src={
+                    artist.imageUrl.startsWith("data:")
+                      ? artist.imageUrl
+                      : `data:image/jpeg;base64,${artist.imageUrl}`
+                  }
+                  alt={artist.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm uppercase tracking-[0.3rem] text-white/40">
+                  Artist Visual
+                </span>
+              )}
             </div>
 
             <div className="flex flex-col gap-6">

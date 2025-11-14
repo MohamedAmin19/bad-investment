@@ -9,6 +9,7 @@ export type Artist = {
   title: string;
   bio: string[];
   socials: ArtistSocialLink[];
+  imageUrl?: string;
 };
 
 export const artists: Artist[] = [
