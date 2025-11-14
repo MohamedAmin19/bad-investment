@@ -14,6 +14,7 @@ type UpdateItem = {
   title: string;
   isAvailable: boolean;
   url: string;
+  imageUrl?: string;
 };
 
 export function UpdatesPage() {
@@ -38,7 +39,40 @@ export function UpdatesPage() {
           throw new Error(data.error || "Failed to fetch updates");
         }
 
-        setUpdates(data.updates || []);
+        const updates = data.updates || [];
+        
+        // Sort updates by date (newest to oldest)
+        // Handles various date formats: DD/MM/YYYY, YYYY-MM-DD, etc.
+        const sortedUpdates = updates.sort((a: UpdateItem, b: UpdateItem) => {
+          const parseDate = (dateStr: string): Date => {
+            // Try DD/MM/YYYY format first
+            if (dateStr.includes("/")) {
+              const parts = dateStr.split("/");
+              if (parts.length === 3) {
+                // DD/MM/YYYY
+                return new Date(
+                  parseInt(parts[2]),
+                  parseInt(parts[1]) - 1,
+                  parseInt(parts[0])
+                );
+              }
+            }
+            // Try YYYY-MM-DD format
+            if (dateStr.includes("-")) {
+              return new Date(dateStr);
+            }
+            // Fallback to Date constructor
+            return new Date(dateStr);
+          };
+
+          const dateA = parseDate(a.date);
+          const dateB = parseDate(b.date);
+          
+          // Sort descending (newest first)
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        setUpdates(sortedUpdates);
       } catch (err) {
         setUpdatesError(err instanceof Error ? err.message : "Failed to load updates");
       } finally {
@@ -214,13 +248,29 @@ export function UpdatesPage() {
                       {...wrapperProps}
                       className={update.url ? "cursor-pointer" : ""}
                     >
-                      <div
-                        className={`aspect-[4/3] w-full rounded-sm border transition-opacity ${
-                          isEnded
-                            ? "border-white/10 bg-white/10"
-                            : "border-white/30 bg-white/5"
-                        } ${update.url ? "hover:opacity-80" : ""}`}
-                      />
+                      {update.imageUrl ? (
+                        <img
+                          src={
+                            update.imageUrl.startsWith("data:")
+                              ? update.imageUrl
+                              : `data:image/jpeg;base64,${update.imageUrl}`
+                          }
+                          alt={update.title}
+                          className={`aspect-[4/3] w-full rounded-sm border object-cover transition-opacity ${
+                            isEnded
+                              ? "border-white/10 opacity-50"
+                              : "border-white/30"
+                          } ${update.url ? "hover:opacity-80" : ""}`}
+                        />
+                      ) : (
+                        <div
+                          className={`aspect-[4/3] w-full rounded-sm border transition-opacity ${
+                            isEnded
+                              ? "border-white/10 bg-white/10"
+                              : "border-white/30 bg-white/5"
+                          } ${update.url ? "hover:opacity-80" : ""}`}
+                        />
+                      )}
                     </UpdateWrapper>
                     <div className="flex items-center justify-center">
                       {isEnded ? (
