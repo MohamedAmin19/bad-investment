@@ -6,6 +6,7 @@ import {
   Karantina,
   League_Spartan,
 } from "next/font/google";
+import { CartProvider } from "@/contexts/CartContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,9 +37,7 @@ const leagueSpartan = League_Spartan({
 });
 
 export const metadata: Metadata = {
-  title: "LEGE-CY | Music Collective",
-  description:
-    "LEGE-CY is a music collective bringing artists and fans together through live experiences.",
+  title: "BADINVSTMENT"
 };
 
 export default function RootLayout({
@@ -51,7 +50,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${anton.variable} ${karantina.variable} ${leagueSpartan.variable} antialiased`}
       >
-        {children}
+        <CartProvider>
+          {children}
+        </CartProvider>
       </body>
     </html>
   );
