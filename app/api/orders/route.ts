@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { customerInfo, items, total, userId } = body;
+    const { customerInfo, items, subtotal, shippingFee, total, paymentMethod, userId } = body;
 
     // Validate required fields
     if (!customerInfo || typeof customerInfo !== "object") {
@@ -86,9 +86,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (subtotal === undefined || typeof subtotal !== "number" || subtotal < 0) {
+      return NextResponse.json(
+        { error: "Valid order subtotal is required" },
+        { status: 400 }
+      );
+    }
+
+    if (shippingFee === undefined || typeof shippingFee !== "number" || shippingFee < 0) {
+      return NextResponse.json(
+        { error: "Valid shipping fee is required" },
+        { status: 400 }
+      );
+    }
+
     if (!total || typeof total !== "number" || total <= 0) {
       return NextResponse.json(
         { error: "Valid order total is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!paymentMethod || (paymentMethod !== "cod" && paymentMethod !== "card")) {
+      return NextResponse.json(
+        { error: "Payment method must be 'cod' or 'card'" },
         { status: 400 }
       );
     }
@@ -120,7 +141,10 @@ export async function POST(request: NextRequest) {
         quantity: item.quantity,
         image: item.image || "",
       })),
+      subtotal: subtotal,
+      shippingFee: shippingFee,
       total: total,
+      paymentMethod: paymentMethod,
       status: "pending", // pending, processing, shipped, delivered, cancelled
       createdAt: serverTimestamp(),
     };

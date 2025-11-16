@@ -29,6 +29,7 @@ export default function ProductDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -60,22 +61,31 @@ export default function ProductDetailPage() {
     if (!product) return;
 
     setIsAddingToCart(true);
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.images && product.images.length > 0 ? product.images[0] : "",
-    });
+    addToCart(
+      {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.images && product.images.length > 0 ? product.images[0] : "",
+      },
+      quantity
+    );
     
     setTimeout(() => {
       setIsAddingToCart(false);
     }, 500);
   };
 
+  const handleQuantityChange = (newQuantity: number) => {
+    if (newQuantity < 1) return;
+    if (newQuantity > 99) return; // Max 99 items
+    setQuantity(newQuantity);
+  };
+
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-EG", {
       style: "currency",
-      currency: "USD",
+      currency: "EGP",
     }).format(price);
   };
 
@@ -241,14 +251,57 @@ export default function ProductDetailPage() {
                 <p>{product.description}</p>
               </div>
 
-              <button
-                onClick={handleAddToCart}
-                disabled={isAddingToCart}
-                className="mt-4 rounded-sm bg-white/20 px-8 py-3 text-sm uppercase tracking-[0.3rem] text-white transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ fontFamily: "var(--font-league-spartan)" }}
-              >
-                {isAddingToCart ? "Adding..." : "Add to Cart"}
-              </button>
+              <div className="mt-4 flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  <label
+                    className="text-sm uppercase tracking-[0.2rem] text-white/80"
+                    style={{ fontFamily: "var(--font-league-spartan)" }}
+                  >
+                    Quantity:
+                  </label>
+                  <div className="flex items-center gap-2 border border-white/20">
+                    <button
+                      type="button"
+                      onClick={() => handleQuantityChange(quantity - 1)}
+                      disabled={quantity <= 1}
+                      className="px-3 py-2 text-white transition-opacity hover:opacity-70 disabled:opacity-30 disabled:cursor-not-allowed"
+                      aria-label="Decrease quantity"
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={quantity}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 1;
+                        handleQuantityChange(value);
+                      }}
+                      className="w-16 border-0 bg-transparent py-2 text-center text-white outline-none"
+                      style={{ fontFamily: "var(--font-league-spartan)" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleQuantityChange(quantity + 1)}
+                      disabled={quantity >= 99}
+                      className="px-3 py-2 text-white transition-opacity hover:opacity-70 disabled:opacity-30 disabled:cursor-not-allowed"
+                      aria-label="Increase quantity"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleAddToCart}
+                  disabled={isAddingToCart}
+                  className="rounded-sm bg-white/20 px-8 py-3 text-sm uppercase tracking-[0.3rem] text-white transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ fontFamily: "var(--font-league-spartan)" }}
+                >
+                  {isAddingToCart ? "Adding..." : `Add ${quantity} to Cart`}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -11,12 +11,15 @@ import { socialLinks } from "@/lib/socialLinks";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 
+const SHIPPING_FEE = 70; // EGP
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, updateQuantity, removeFromCart, getTotalPrice, clearCart } = useCart();
   const { user } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "card">("cod");
   const [formData, setFormData] = useState({
     name: "",
     email: user?.email || "",
@@ -33,10 +36,18 @@ export default function CheckoutPage() {
   }, [user]);
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-EG", {
       style: "currency",
-      currency: "USD",
+      currency: "EGP",
     }).format(price);
+  };
+
+  const getSubtotal = () => {
+    return getTotalPrice();
+  };
+
+  const getTotal = () => {
+    return getSubtotal() + SHIPPING_FEE;
   };
 
   const getImageSrc = (imageUrl: string) => {
@@ -69,7 +80,10 @@ export default function CheckoutPage() {
           quantity: item.quantity,
           image: item.image,
         })),
-        total: getTotalPrice(),
+        subtotal: getSubtotal(),
+        shippingFee: SHIPPING_FEE,
+        total: getTotal(),
+        paymentMethod: paymentMethod,
       };
 
       // Submit order to API
@@ -217,6 +231,39 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              <div className="flex flex-col gap-6">
+                <h2
+                  className="text-xl uppercase tracking-[0.3rem]"
+                  style={{ fontFamily: "var(--font-league-spartan)" }}
+                >
+                  Payment Method
+                </h2>
+                <div className="flex flex-col gap-4">
+                  <label className="flex cursor-pointer items-center gap-3 border-b border-white/20 pb-3">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cod"
+                      checked={paymentMethod === "cod"}
+                      onChange={(e) => setPaymentMethod(e.target.value as "cod" | "card")}
+                      className="h-4 w-4 accent-white"
+                    />
+                    <span className="text-base text-white">Cash on Delivery (COD)</span>
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-3 border-b border-white/20 pb-3">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="card"
+                      checked={paymentMethod === "card"}
+                      onChange={(e) => setPaymentMethod(e.target.value as "cod" | "card")}
+                      className="h-4 w-4 accent-white"
+                    />
+                    <span className="text-base text-white">Visa / Credit Card</span>
+                  </label>
+                </div>
+              </div>
+
               {error && (
                 <div className="text-sm uppercase tracking-[0.1rem] text-red-400">
                   {error}
@@ -290,13 +337,29 @@ export default function CheckoutPage() {
                   </div>
                 ))}
               </div>
-              <div className="border-t border-white/20 pt-4">
+              <div className="border-t border-white/20 pt-4 space-y-3">
                 <div className="flex items-center justify-between">
+                  <span className="text-sm uppercase tracking-[0.2rem] text-white/80">
+                    Subtotal
+                  </span>
+                  <span className="text-base text-white">
+                    {formatPrice(getSubtotal())}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm uppercase tracking-[0.2rem] text-white/80">
+                    Shipping
+                  </span>
+                  <span className="text-base text-white">
+                    {formatPrice(SHIPPING_FEE)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-white/20 pt-3">
                   <span className="text-lg uppercase tracking-[0.2rem] text-white">
                     Total
                   </span>
                   <span className="text-xl font-semibold text-white">
-                    {formatPrice(getTotalPrice())}
+                    {formatPrice(getTotal())}
                   </span>
                 </div>
               </div>
