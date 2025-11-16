@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, User } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 type NavItem = {
   label: string;
@@ -17,7 +19,13 @@ type HeaderNavProps = {
 
 export function HeaderNav({ brand, menuItems, className }: HeaderNavProps) {
   const { getTotalItems } = useCart();
+  const { user, loading: authLoading } = useAuth();
   const cartItemCount = getTotalItems();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <header
@@ -45,6 +53,15 @@ export function HeaderNav({ brand, menuItems, className }: HeaderNavProps) {
             {item.label}
           </Link>
         ))}
+        {mounted && !authLoading && (
+          <Link
+            href={user ? "/profile" : "/auth/login"}
+            className="transition-opacity hover:opacity-70"
+            aria-label={user ? "Profile" : "Login"}
+          >
+            <User className="h-5 w-5" />
+          </Link>
+        )}
         <Link
           href="/store/checkout"
           className="relative transition-opacity hover:opacity-70"

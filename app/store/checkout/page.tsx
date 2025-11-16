@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -9,19 +9,28 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { mainMenuItems } from "@/lib/navigation";
 import { socialLinks } from "@/lib/socialLinks";
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, updateQuantity, removeFromCart, getTotalPrice, clearCart } = useCart();
+  const { user } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
-    email: "",
+    email: user?.email || "",
     phone: "",
     address: "",
     city: "",
   });
+
+  // Update email when user changes
+  useEffect(() => {
+    if (user?.email) {
+      setFormData((prev) => ({ ...prev, email: user.email || "" }));
+    }
+  }, [user]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -45,6 +54,7 @@ export default function CheckoutPage() {
     try {
       // Prepare order data
       const orderData = {
+        userId: user?.uid || null, // Associate order with user if logged in
         customerInfo: {
           name: formData.name,
           email: formData.email,

@@ -1,11 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from "firebase/firestore";
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const ordersRef = collection(db, "orders");
+    const q = query(
+      ordersRef,
+      where("userId", "==", userId),
+      orderBy("createdAt", "desc")
+    );
+    const querySnapshot = await getDocs(q);
+
+    const orders = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return NextResponse.json(
+      { 
+        success: true, 
+        orders 
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch orders. Please try again." },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { customerInfo, items, total } = body;
+    const { customerInfo, items, total, userId } = body;
 
     // Validate required fields
     if (!customerInfo || typeof customerInfo !== "object") {
@@ -64,6 +105,7 @@ export async function POST(request: NextRequest) {
 
     // Store order in Firestore
     const orderData = {
+      userId: userId || null, // Associate order with user if logged in
       customerInfo: {
         name: customerInfo.name.trim(),
         email: customerInfo.email.toLowerCase().trim(),
